@@ -5,6 +5,9 @@
 #include <gazebo/physics/Contact.hh>
 #include <gazebo/common/common.hh>
 #include <stdio.h>
+#include "ros/ros.h"
+#include "std_msgs/String.h"
+
 
 #include <gazebo_grasp_plugin/GazeboGraspFix.h>
 #include <gazebo_version_helpers/GazeboVersionHelpers.h>
@@ -21,6 +24,9 @@ using gazebo::GzVector3;
 // Register this plugin with the simulator
 GZ_REGISTER_MODEL_PLUGIN(GazeboGraspFix)
 
+ros::Publisher pub;
+std::unique_ptr<ros::NodeHandle> n;
+std_msgs::String msg;
 ////////////////////////////////////////////////////////////////////////////////
 GazeboGraspFix::GazeboGraspFix()
 {
@@ -101,7 +107,6 @@ void GazeboGraspFix::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
     gzmsg << "GazeboGraspFix: Using disable_collisions_on_attach " <<
           this->disableCollisionsOnAttach << std::endl;
   }
-
   sdf::ElementPtr forcesAngleToleranceElem =
     _sdf->GetElement("forces_angle_tolerance");
   if (!forcesAngleToleranceElem)
@@ -268,6 +273,10 @@ void GazeboGraspFix::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
   this->node->Init(gazebo::GetName(*(this->world)));
   physics::ContactManager *contactManager = physics->GetContactManager();
   contactManager->PublishContacts();  // TODO not sure this is required?
+  n.reset(new ros::NodeHandle());
+  
+   
+  pub = n->advertise<std_msgs::String>("object",1000);
 
   filter_name = model->GetScopedName();
   std::string topic = contactManager->CreateFilter(filter_name,
@@ -866,6 +875,8 @@ void GazeboGraspFix::OnContact(const ConstContactsPtr &_msg)
         // collision 1 is the object
         collidingObjName = name1;
         collidingLink = name2;
+        msg.data = name1;
+        pub.publish(msg);
         linkCollision = collision2;
         objCollision = collision1;
         gripperOfCollidingLink = gripperCollIt->second;
@@ -877,6 +888,8 @@ void GazeboGraspFix::OnContact(const ConstContactsPtr &_msg)
       {
         // collision 2 is the object
         collidingObjName = name2;
+        msg.data = name2;
+        pub.publish(msg);
         collidingLink = name1;
         linkCollision = collision1;
         objCollision = collision2;
@@ -954,4 +967,5 @@ void GazeboGraspFix::OnContact(const ConstContactsPtr &_msg)
       //gzmsg<<"Average force of contact= "<<avgForce.x<<", "<<avgForce.y<<", "<<avgForce.z<<" out of "<<force.size()<<" vectors."<<std::endl;
     }
   }
+  
 }
