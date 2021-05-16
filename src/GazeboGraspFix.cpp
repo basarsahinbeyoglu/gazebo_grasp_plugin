@@ -276,7 +276,7 @@ void GazeboGraspFix::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
   n.reset(new ros::NodeHandle());
   
    
-  pub = n->advertise<std_msgs::String>("object",1000);
+  pub = n->advertise<std_msgs::String>(model->GetName()+"/object",1000);
 
   filter_name = model->GetScopedName();
   std::string topic = contactManager->CreateFilter(filter_name,
